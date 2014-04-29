@@ -1,0 +1,4 @@
+wicker
+======
+
+Javascript AMD loader
