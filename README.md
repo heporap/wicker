@@ -49,6 +49,8 @@ wicker.factory("mymodule", ["jquery"], function($){
 #### Recalling constructor
 
 第一引数に名前のみ指定する事で、コンストラクターを再度呼び出す事ができます。
+コンストラクターからreturn falseするとそのモジュールは未定義として処理を続行します。
+依存モジュールの読み込みを待機させたい場合はreturn falseしてください。
 
 ```
 dab.exports("amd");
@@ -62,6 +64,8 @@ wicker.carriage(["jquery.min.js"]);
         
         wicker.factory("myconfig");
         
+        // コンテクストを確定しない場合はreturn falseする
+        return false;
       }});
     }
     return mydata;
