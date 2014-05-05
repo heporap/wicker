@@ -48,7 +48,9 @@ Module names of "require", "exports", "module" are defined as default modules.
 
 #### Recalling constructor
 
-You can call the constructor again to set the name for the first atgument only.
+You can call the constructor again to set the name for the first atgument only.  
+The module will continue processing as an undefined if return false from the constructor.  
+Please return false if you want to park the read of dependent modules.
 
 ```
 dab.exports("amd");
@@ -62,6 +64,7 @@ wicker.carriage(["jquery.min.js"]);
         
         wicker.factory("myconfig");
         
+        return false;
       }});
     }
     return mydata;
