@@ -1,7 +1,7 @@
 # Wicker.js
 
 Javascript Module Loader.  
-AMD互換のdefine、requireの他、独自機能によりAMDに対応していないjQueryプラグインや、グローバル関数で定義されるライブラリをAMDのように扱う事が可能です。
+This supports "define", "require" of AMD compatible, and you can manage non-AMD jQuery plugin, global functions like AMD modules with original functions.
 
 =====
 ## API
