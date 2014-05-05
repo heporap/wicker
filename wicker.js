@@ -128,7 +128,7 @@
 	 * URLからモジュールIDの検証と擬似コンストラクタの生成または実行
 	 */
 	function applyScript(url){
-		var ids = [], id, i, mod;
+		var ids = [], id, i, g, mod;
 		for(id in modules ){
 			mod = modules[id];
 			if( mod.url === url ){
@@ -159,16 +159,16 @@
 			if( !mod.initialized ){
 				
 				adapter(id);
-				recallAdapter(id);
-				
 				if( !mod.constructor ){
 					mod.context = ( window[mod.attach] )? window[mod.attach]: true;
 					mod.initialized = true;
 				}
-				for( id in mod.global ){
-					window[mod.global[id]] = mod._global[id];
-					mod._global[id] = null;
+				for( g in mod.global ){
+					window[mod.global[g]] = mod._global[g];
+					mod._global[g] = null;
 				}
+				
+				recallAdapter(id);
 			}
 		}
 		
