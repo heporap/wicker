@@ -1,0 +1,185 @@
+# Wicker.js
+
+Javascript Module Loader.  
+AMD互換のdefine、requireの他、独自機能によりAMDに対応していないjQueryプラグインや、グローバル関数で定義されるライブラリをAMDのように扱う事が可能です。
+
+=====
+## API
+
+Wicker.js has "wicker" namespace.
+
+* [wicker.factory()](#wickerfactoryname-depends-constructor) ... This defines a module, as define of AMD.
+* [wicker.manufacture()](#wickermanufacturedepends-constructor) ... This defines a controller, as require of AMD.
+* [wicker.carriage()](#wickercarriageurl-baseurl) ... This will loads modules files, as require.confg of "require.js".
+* [wicker.config()](#wickerconfigname-props) ... This will configure default values of modules.
+* [wicker.define()](#wickerdefineid-depends-constructor) ... This is the same as define of AMD.
+* [wicker.require()](#wickerrequiredepends-controller) ... This is the same as require of AMD.
+* [dab.exports()](#dabexportsid) ... This exports wicker methos to global from namespace.
+
+======
+### wicker.factory(name, depends, constructor)
+
+This defines a module.
+
+- name: String *required*  
+  Module name.
+- depends: Array  *optional*  
+  Related modules name
+- constructor: Function *required if definition*  
+  Constructor of module  
+  This will be called after all depended modules were loaded and initialized.  
+  Arguments: depended modules
+
+#### Basic usage
+
+```
+wicker.factory("mymodule", ["jquery"], function($){
+    // define your module here
+    
+    
+    // return accessor for this module
+    return {
+      version: "1.0"
+    };
+});
+```
+
+Module names of "require", "exports", "module" are defined as default modules.
+
+#### Recalling constructor
+
+You can call the constructor again to set the name for the first atgument only.
+
+```
+dab.exports("amd");
+wicker.carriage(["jquery.min.js"]);
+(function(){
+  var mydata;
+  wicker.factory("myconfig", ["jquery"], function($){
+    if( !mydata ){
+      $.ajax('config.json', {complete: function(xhr){
+        mydata = JSON.parse(xhr.responseText);
+        
+        wicker.factory("myconfig");
+        
+      }});
+    }
+    return mydata;
+  });
+}());
+
+// This waits for "myconfig" ajax load
+wicker.manufacture(["myconfig"], function(config){
+  console.log( config );
+});
+```
+
+======
+### wicker.manufacture(depends, constructor)
+
+This defines the controller associated with the module.  
+The time to call constructor is after DOMContentLoaded event of document.
+
+```
+wicker.manufacture(["jquery", "jquery.cookie"], function($){
+    var cookie = $.cookie("key");
+    $("#output").html( cookie );
+});
+```
+
+======
+### wicker.carriage(url, baseURL)
+
+This will load the module files.  
+This will create script element after DOMContentLoaded event of the document.
+All script elements will be set "async" and "defer" attributes.  
+If baseURL was omitted, then the baseURL is the URL where wicker.js is.  
+Please specify "./" if you want to reference the same URL as the document.
+
+- wicker.carriage( url:String, baseURL:String )  
+- wicker.carriage( urls:Array, baseURL:String )  
+  Load script file of the url or urls.
+- wicker.carriage( options:Object )  
+  Equivarent to "require.config" of require.js.  
+  You can set IDs to the url each as below:
+```
+{
+  id: url,
+  id: url
+}
+```
+  
+```
+wicker.carriage( {
+    baseURL: "./",
+    paths: {
+      "jquery": "js/jquery.min.js",
+      "jquery.cookie": "js/jquery.cookie.min.js",
+      "jquery.lazyload": {
+	      "url": "js/jquery.lazyload.min.js",
+          'depends': ['jquery'],
+		  "global": {"jquery": "jQuery"}
+      },
+      "A": {
+          "url": "js/utils.js",
+          "attach": "globalFunction"
+      }
+    }
+});
+```
+
+Please refer to wiki for details to load AMD compatible modules, non-AMD modules, and non-AMD libraries.
+
+======
+### wicker.config(name, props)
+
+configure or set default values to modules and wicker.js itself.
+
+======
+### wicker.define(id, depends, constructor)
+
+"define()" of AMD compatible.  
+id can be omitted. But if omitted, the filename will be the id, so you need to define one module in one file each.  
+`wicker.carriage(id+".js", "./")` is called automatically, the baseURL will be the same as the document.
+
+"depends" can be omitted, and the default depends is ["require", "exports", "module"].
+
+Please refer to wiki for detail.
+
+======
+### wicker.require(depends, constructor)
+
+"require()" of AMD compatible.  
+The usage is the same as [wicker.manufacture()](#wickermanufacturedepends-constructor).
+
+======
+### dab.exports(id)
+
+This exports namespace to global variables.  
+
+* dab.exports("wicker")   
+  exports "wicker.factory", "wicker.manufacture", "wicker.carriage", "wicker.config".
+* dab.exports("amd")  
+  exports "wicker.define", "wicker.require".  
+Please make this designation when it is used AMD compatible modules as AMD module like jQuery, underscore.js, Backbone.
+
+```
+dab.exports("wicker amd");
+// Now you can use "carriage()", "factory()", "define()", "require()" etc. without "wicker." namespace.
+carriage({
+  "Backbone": "backbone.min.js",
+  "underscore": "underscore.min.js",
+  "jquery": "jquery.min.js"
+});
+require(["Backbone"], function(backbone){
+  // use backbone here
+});
+```
+
+## License
+
+(c) 2014 Wicker Wings
+
+* Source code: The MIT License  
+* Documents: CC-BY 3.0 or later  
+* Sample code: Public domain or CC0  
