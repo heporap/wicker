@@ -9,11 +9,10 @@ This supports "define", "require" of AMD compatible, and you can manage non-AMD 
 Wicker.js has "wicker" namespace.
 
 * [wicker.factory()](#wickerfactoryname-depends-constructor) ... This defines a module, as define of AMD.
-* [wicker.manufacture()](#wickermanufacturedepends-constructor) ... This defines a controller, as require of AMD.
 * [wicker.carriage()](#wickercarriageurl-baseurl) ... This will loads modules files, as require.confg of "require.js".
 * [wicker.config()](#wickerconfigname-props) ... This will configure default values of modules.
-* [wicker.define()](#wickerdefineid-depends-constructor) ... This is the same as define of AMD.
-* [wicker.require()](#wickerrequiredepends-controller) ... This is the same as require of AMD.
+* [define()](#defineid-depends-constructor) ... This is the same as `define()` of AMD.
+* [require()](#requiredepends-controller) ... Wrapper function for `define()`.
 * [dab.exports()](#dabexportsid) ... This exports wicker methos to global from namespace.
 
 ======
@@ -21,7 +20,7 @@ Wicker.js has "wicker" namespace.
 
 This defines a module.
 
-- name: String *required*  
+- name: String *optional*  
   Module name.
 - depends: Array  *optional*  
   Related modules name
@@ -53,7 +52,6 @@ The module will continue processing as an undefined if return false from the con
 Please return false if you want to park the read of dependent modules.
 
 ```
-dab.exports("amd");
 wicker.carriage(["jquery.min.js"]);
 (function(){
   var mydata;
@@ -72,21 +70,8 @@ wicker.carriage(["jquery.min.js"]);
 }());
 
 // This waits for "myconfig" ajax load
-wicker.manufacture(["myconfig"], function(config){
+wicker.factory(["myconfig"], function(config){
   console.log( config );
-});
-```
-
-======
-### wicker.manufacture(depends, constructor)
-
-This defines the controller associated with the module.  
-The time to call constructor is after DOMContentLoaded event of document.
-
-```
-wicker.manufacture(["jquery", "jquery.cookie"], function($){
-    var cookie = $.cookie("key");
-    $("#output").html( cookie );
 });
 ```
 
@@ -139,7 +124,7 @@ Please refer to wiki for details to load AMD compatible modules, non-AMD modules
 configure or set default values to modules and wicker.js itself.
 
 ======
-### wicker.define(id, depends, constructor)
+### define(id, depends, constructor)
 
 "define()" of AMD compatible.  
 id can be omitted. But if omitted, the filename will be the id, so you need to define one module in one file each.  
@@ -150,10 +135,9 @@ id can be omitted. But if omitted, the filename will be the id, so you need to d
 Please refer to wiki for detail.
 
 ======
-### wicker.require(depends, constructor)
+### require(depends, constructor)
 
-"require()" of AMD compatible.  
-The usage is the same as [wicker.manufacture()](#wickermanufacturedepends-constructor).
+This is the same as `define()` except for that id is unused.  
 
 ======
 ### dab.exports(id)
@@ -162,13 +146,10 @@ This exports namespace to global variables.
 
 * dab.exports("wicker")   
   exports "wicker.factory", "wicker.manufacture", "wicker.carriage", "wicker.config".
-* dab.exports("amd")  
-  exports "wicker.define", "wicker.require".  
-Please make this designation when it is used AMD compatible modules as AMD module like jQuery, underscore.js, Backbone.
 
 ```
-dab.exports("wicker amd");
-// Now you can use "carriage()", "factory()", "define()", "require()" etc. without "wicker." namespace.
+dab.exports("wicker");
+// Now you can use "carriage()", "factory()" without "wicker." namespace.
 carriage({
   "Backbone": "backbone.min.js",
   "underscore": "underscore.min.js",
