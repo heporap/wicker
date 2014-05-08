@@ -1,5 +1,5 @@
 /*
- * Wicker.js 0.1
+ * Wicker.js 0.2
  * 
  * Javascript module loader
  * 
@@ -17,29 +17,27 @@
 			src = script.src || location.href;
 		src = src.match(/^([^?#]+)/)[1];
 		__FILENAME__ = src.substring(src.lastIndexOf('/')+1);
-		__BASEURL__ = src.replace(new RegExp('\/'+__FILENAME__+'.*'), '/');
+		__BASEURL__ = __FILENAME__? src.replace(new RegExp('\/'+__FILENAME__+'.*'), '/'): src;
 	})();
 	
 	/*
 	 * 擬似グローバル変数
 	 */
 	var modules = {},
-		controllers = [],
 		isDOMContentLoaded = false,
 		modCount = 1,
-		lastModID;
+		lastModID,
+		currentGlobals={};
 	
 	defineCommonModules();
 	/*
 	 * 
 	 */
-	function makeModule(id, depends, constructor, opt){
-		function Module(id, depends, constructor, url, attach, global){
+	function makeModule(id, depends, constructor, opt, oldMod){
+		function Module(id, depends, constructor, url, attach){
 			this.name = id;
 			this.attach = attach;
 			this.depends = [];
-			this.global = {};
-			this._global = {};
 			this.constructor = constructor;
 			this.initialized = false;
 			this.url = url;
@@ -47,7 +45,6 @@
 			this.confs = {};
 			
 			copy(depends, this.depends);
-			copy(global, this.global);
 		}
 		Module.prototype = {
 			config: function(arg){
@@ -65,14 +62,87 @@
 		}
 		
 		var url = isString(opt)? opt: opt? opt.url: "";
-		var global = isString(opt)? {}: opt && opt.global? opt.global: {};
 		var attach = isString(opt)? id: opt && opt.attach? opt.attach: id;
 		
-		var module = new Module(id, depends||[], constructor, url, attach, global);
+		var module = new Module(id, depends||[], constructor, url, attach);
+		
+		if( oldMod ){
+			mod.url = oldMod.url;
+			mod.loaded = oldMod.loaded;
+			
+			mod.config(oldMod.confs);
+		}
 		
 		return module;
 	}
 	
+	/* 
+	 * グローバル変数の一時利用
+	 */
+	function makeGlobalSim(gnames, id){
+		function GlobalSim(globalName, modName){
+			this.globalName = globalName;
+			this.contextModName = modName;
+			this.oldVar = undefined;
+			this.moduleIDs = [];
+			this.isSwapping = false;
+		}
+		GlobalSim.prototype = {
+			swap: function(){
+				if( this.isSwapping ){
+					return;
+				}
+				if( modules[this.contextModName] && modules[this.contextModName].context ){
+					this.oldVar = window[this.globalName];
+					window[this.globalName] = modules[this.contextModName].context;
+					this.isSwapping = true;
+				}
+			},
+			recover: function(){
+				if( modules[this.contextModName] ){
+					window[this.globalName] = this.oldVar;
+				}
+				this.isSwapping = false;
+			},
+			addID: function(ids){
+				var i, n, k;
+				this.moduleIDs.push(ids);
+				for( i = 0; i < this.moduleIDs.length; i++ ){
+					n = this.moduleIDs[i];
+					k = this.moduleIDs.lastIndexOf(n);
+					while( i < k ){
+						this.moduleIDs.splice(k, 1);
+						k = this.moduleIDs.lastIndexOf(n);
+					}
+				}
+				
+			},
+			hasModule: function(id){
+				return this.moduleIDs.indexOf(id) !== -1;
+			},
+			isLastModule: function(id){
+				return !this.moduleIDs.length || this.moduleIDs.length === 1 && this.moduleIDs.indexOf(id) !== -1;
+			},
+			removeID: function(id){
+				if( this.hasModule(id) ){
+					this.moduleIDs.splice(this.moduleIDs.indexOf(id), 1);
+				}
+			}
+			
+		};
+		
+		var i, name;
+		if( !gnames ){
+			return;
+		}
+		for( i in gnames ){
+			name = gnames[i];
+			if( !currentGlobals[name] ){
+				currentGlobals[name] = new GlobalSim(name, i);
+			}
+			currentGlobals[name].addID(id);
+		}
+	}
 	
 	/*
 	 * ウインドウロード完了時の処理を登録。
@@ -84,20 +154,29 @@
 			root.removeEventListener('DOMContentLoaded', onDOMContentLoaded, false);
 		}
 		
-		var id, mod;
+		var id, mod, g, gs;
 		var doc = document,
 			parent = doc.querySelector('script').parentNode,
 			script;
+			
+			for( g in currentGlobals ){
+				gs = currentGlobals[g];
+				mod = modules[ g ];
+				if( mod ){
+					var readyDepends = isLoadedModules( mod.depends );
+					if( gs.moduleIDs.length && mod.initialized && readyDepends ){
+						gs.swap();
+					}
+				}
+			
+			}
+		
 		
 		for( id in modules ){
 			mod = modules[id];
 			if( !mod.loaded && mod.url && isLoadedModules(mod.depends) ){
-				for( var i in mod.global ){
-					mod._global[i] = window[mod.global[i]];
-					window[mod.global[i]] = modules[i].context;
-				}
 				script = doc.createElement('script');
-				script.setAttribute('src', modules[id].url);
+				script.setAttribute('src', mod.url);
 				script.setAttribute('async', 'async');
 				script.setAttribute('defer', 'defer');
 				if( script.addEventListener ){
@@ -106,11 +185,10 @@
 					script.attachEvent('onload', onloadScript);
 				}
 				parent.insertBefore(script, null);
-				modules[id].loaded = true;
+				mod.loaded = true;
 			}
 		}
 		
-		callControllers();
 	}
 	
 	/*
@@ -132,7 +210,7 @@
 		for(id in modules ){
 			mod = modules[id];
 			if( mod.url === url ){
-				if( lastModID ){
+				if( lastModID && !modules[lastModID].constructor && !modules[lastModID].initialized ){
 					var tmp = modules[id];
 					mod = modules[id] = modules[lastModID];
 					mod.name = id;
@@ -153,25 +231,31 @@
 			}
 		}
 		
-		for( i = 0; i < ids.length; i++ ){
+		for( i = 0, g=false; i < ids.length; i++ ){
 			id = ids[i];
 			mod = modules[id];
 			if( !mod.initialized ){
-				
-				adapter(id);
+					
+				g = adapter(id);
 				if( !mod.constructor ){
 					mod.context = ( window[mod.attach] )? window[mod.attach]: true;
 					mod.initialized = true;
 				}
-				for( g in mod.global ){
-					window[mod.global[g]] = mod._global[g];
-					mod._global[g] = null;
+				if( g ){
+					recallAdapter(id);
 				}
-				
-				recallAdapter(id);
 			}
 		}
-		
+		var gsim;
+		for( g in currentGlobals ){
+			gsim = currentGlobals[g];
+			gsim.removeID(id);
+			
+			if( !gsim.moduleIDs.length ){
+				gsim.recover();
+			}
+			
+		}
 		lastModID = null;
 		
 	}
@@ -317,6 +401,8 @@
 		mod = makeModule(id, opt.depends, null, opt);
 		modules[mod.name] = mod;
 		
+		makeGlobalSim(opt.global, mod.name);
+		
 		if( isDOMContentLoaded ){
 			onDOMContentLoaded();
 		}
@@ -350,51 +436,51 @@
 	 ** recalling constructor
 	 * factory(name:String);
 	 */
-	function factory(opts, depends, constructor){
-		var name, confs;
+	function factory(){
+		var name = null, depends = ['require', 'exports', 'module'], constructor, confs,
+			i;
 		
-		if( arguments.length === 1 ){
-			name = opts;
+		for(i = 0; i < arguments.length; i++ ){
+			if( isString( arguments[i] ) ){
+				name = arguments[i];
+			}else if( isArray(arguments[i]) ){
+				depends = arguments[i];
+			}else if( isFunction(arguments[i]) ){
+				constructor = arguments[i];
+			}else if( !!arguments[i] ){
+				
+				name = arguments[i].name;
+				confs = {};
+				copy(arguments[i], confs);
+				delete confs.id;
+				
+			}
+		}
+		
+		if( arguments.length === 1 && name ){
 			lastModID = null;
-			adapter(name);
-			recallAdapter(name);
+			if( adapter(name) ){
+				recallAdapter(name);
+			}
 			lastModID = name;
 			return name;
 		}
 		
-		if( arguments.length === 2 ){
-			constructor = depends;
-			depends = [];
-		}
-		
-		if( isString(opts) ){
-			name = opts;
-		}else if( isDefined(opts) ){
-			name = opts.id || opts.name;
-			confs = {};
-			copy(opts, confs);
-			delete confs.id;
-		}
-		
 		if( name && modules[name] && modules[name].initialized ){
-			return false;
+			return name;
 		}
-		
-		var mod = makeModule(name, depends, constructor, {});
+		var mod = makeModule(name, depends, constructor, {}, name? modules[name]: null);
 		name = mod.name;
-		var oldMod = modules[name];
-		if( oldMod ){
-			mod.config(oldMod.confs);
-			mod.url = oldMod.url;
-		}else if(confs){
+		
+		if( confs ){
 			mod.config(confs);
 		}
 		modules[name] = mod;
-		oldMod = null;
 		
 		lastModID = null;
-		adapter(name);
-		recallAdapter(name);
+		if( adapter(name) ){
+			recallAdapter(name);
+		}
 		lastModID = name;
 		
 		return name;
@@ -403,23 +489,28 @@
 	/*
 	 * compatibility with AMD
 	 */
-	function define(id, depends, constructor){
-		if( arguments.length === 1 ){
-			constructor = id;
-			depends = ['require', 'exports', 'module'];
-			id = null;
-		}else if( arguments.length === 2 ){
-			constructor = depends;
-			if( isString(id) ){
-				depends = ['require', 'exports', 'module'];
-			}else{
-				depends =id;
-				id = null;
+	function define(){
+		var name = null, depends = ['require', 'exports', 'module'], constructor,
+			i;
+		var mk = function(o){ return function(){return o;}; };
+		
+		for(i = 0; i < arguments.length; i++ ){
+			if( isString( arguments[i] ) ){
+				name = arguments[i];
+			}else if( isArray(arguments[i]) ){
+				depends = arguments[i];
+			}else if( isFunction(arguments[i]) ){
+				constructor = arguments[i];
+			}else if( !!arguments[i] ){
+				constructor = mk(constructor);
 			}
 		}
+		
 		carriage( addExt(depends, '.js'), './');
-		factory(id, depends, constructor);
-	
+		factory(name, depends, constructor);
+		
+		name = depends = constructor = null;
+		
 	}
 	
 	/*
@@ -432,27 +523,12 @@
 		for( name in modules ){
 			// 初期化がまだであること  // 引数モジュールに依存する事
 			if( !modules[name].initialized && modules[name].depends.indexOf(id) !== -1 ){
-				adapter(name);
+				if( adapter(name) ){
+					recallAdapter(name);
+				}
 			}
 		}
 		
-		callControllers();
-		
-	}
-	
-	/*
-	 * 
-	 */
-	function callControllers(){
-		// 待機中コントローラーの確認と実行
-		var i = controllers.length;
-		while(i--){
-			var con = controllers[i];
-			if( isLoadedModules(con.depends) ){
-				con.controller.apply(null, collector( con.depends ));
-				controllers.splice(i,1);
-			}
-		}
 	}
 	
 	/*
@@ -495,39 +571,14 @@
 	 * モジュールを使っての呼び出し
 	 */
 	function manufacture(depends, controller){
-		var queue = {
-				"depends": depends,
-				"controller": controller
-			};
-		controllers.push( queue );
-		
-		if( isDOMContentLoaded ){
-			callControllers();
-		}
+		factory(null, depends, controller);
 	}
 	
 	/*
-	 * compatibility with AMD
+	 * 
 	 */
 	function require(depends, controller){
-		if( arguments.length === 1 ){
-			if( isString(depends) ){
-				return crequire(depends);
-			}else{
-				controller = depends;
-				depends = ['require', 'exports', 'module'];
-			}
-		}
-		
-		carriage( addExt(depends, '.js'), './');
-		manufacture(depends, controller);
-	}
-	
-	/*
-	 * compatibility with CommonJS' require()
-	 */
-	function crequire(name){
-		return modules[name].context;
+		define(depends, controller);
 	}
 	
 	/*
@@ -545,7 +596,12 @@
 	
 	/*
 	 * define "require", "exports", "module" modules
-	 * they are usually used in define() and require()
+	 * require: 
+	 *   compatible CommonJS require("")
+	 * exports: 
+	 *   define()のconstructorの中でexportsのプロパティに代入した内容がモジュールcontextとして保存される。
+	 * module: 
+	 *   How does it work?
 	 */
 	function defineCommonModules(){
 		factory('require', [], function(){
@@ -575,8 +631,7 @@
 		});
 		
 		factory('module', [], function(){
-			var a = {};
-			return a;
+			return {};
 		});
 		
 		lastModID = null;
@@ -594,6 +649,12 @@
 	}
 	function isString(o){
 		return isDefined(o) && typeof o === 'string';
+	}
+	function isArray(o){
+		return isDefined(o) && o.constructor === Array;
+	}
+	function isFunction(o){
+		return isDefined(o) && typeof o === 'function';
 	}
 	
 	/*
@@ -627,7 +688,6 @@
 	root.dab = dab;
 	dab.klass = dab.klass || {};
 	dab.klass.wicker = 'factory manufacture carriage config';
-	dab.klass.amd = 'wicker.define wicker.require';
 	
 	if( !dab.exports ){
 		dab.exports = function(args){
@@ -658,9 +718,9 @@
 	wicker.manufacture = manufacture;
 	wicker.carriage = carriage;
 	wicker.config = config;
-	wicker.define = define;
-	wicker.define.amd = {};
-	wicker.require = require;
+	root.define = define;
+	root.define.amd = {};
+	root.require = require;
 	
 	root.addEventListener('DOMContentLoaded', onDOMContentLoaded, false);
 	
