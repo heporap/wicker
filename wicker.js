@@ -67,10 +67,10 @@
 		var module = new Module(id, depends||[], constructor, url, attach);
 		
 		if( oldMod ){
-			mod.url = oldMod.url;
-			mod.loaded = oldMod.loaded;
+			module.url = oldMod.url;
+			module.loaded = oldMod.loaded;
 			
-			mod.config(oldMod.confs);
+			module.config(oldMod.confs);
 		}
 		
 		return module;
