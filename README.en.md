@@ -47,7 +47,7 @@ Module names of "require", "exports", "module" are defined as default modules.
 
 #### Recalling constructor
 
-You can call the constructor again to set the name for the first atgument only.  
+You can call the constructor again to set the name for the first argument only.  
 The module will continue processing as an undefined if return false from the constructor.  
 Please return false if you want to park the read of dependent modules.
 
@@ -62,8 +62,8 @@ wicker.carriage(["jquery.min.js"]);
         
         wicker.factory("myconfig");
         
-        return false;
       }});
+      return false;
     }
     return mydata;
   });
@@ -88,7 +88,7 @@ Please specify "./" if you want to reference the same URL as the document.
 - wicker.carriage( urls:Array, baseURL:String )  
   Load script file of the url or urls.
 - wicker.carriage( options:Object )  
-  Equivarent to "require.config" of require.js.  
+  Similar to "require.config" of require.js.  
   You can set IDs to the url each as below:
 ```
 {
