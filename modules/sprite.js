@@ -18,11 +18,15 @@
 		sprites,
 		accessor;
 	
-	function Sprite(id, data){
+	function Sprite(id, data, baseURL){
+		baseURL = baseURL.split('/');
+		baseURL.splice(-1);
+		baseURL = baseURL.join('/');
+	
 		this.id = id;
 		this.canvas = null;
 		this.spriteImg = null;
-		this.spriteImgURL = data.src;
+		this.spriteImgURL = baseURL+'/'+data.src;
 		this.spriteData = data;
 		
 		this.initialize();
@@ -128,18 +132,19 @@
 	 * スプライトデータ読み込み失敗
 	 */
 	function onLoadFailure(xhr){
-		console.log('load failure '+xhr.status);
+		wicker.factory("sprite");
+		throw new Error('load failure '+xhr.status);
 	}
 	
 	/* 
 	 * スプライトデータ読み込み完了
 	 * スプライト作成
 	 */
-	function onLoadData(xhr){
+	function onLoadData(xhr, o){
 		var data = JSON.parse(xhr.responseText);
 		var id;
 		for( id in data ){
-			sprites[id] = new Sprite(id, data[id]);
+			sprites[id] = new Sprite(id, data[id], o.url);
 			sprites[id].load();
 		}
 		
@@ -190,7 +195,7 @@
 	
 	accessor = {
 		version: Version,
-		loadData: loadData,
+		load: loadData,
 		getSprite: getSprite
 	};
 	

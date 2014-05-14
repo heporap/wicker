@@ -1,5 +1,5 @@
 /*
- * Wicker.js 0.2
+ * Wicker.js 0.3
  * 
  * Javascript module loader
  * 
@@ -9,16 +9,7 @@
  */
 (function(root, undefined) {
 	'use strict';
-	var __FILENAME__, __BASEURL__;
-	
-	(function(){
-		var scripts = document.getElementsByTagName('script'),
-			script = scripts[scripts.length-1],
-			src = script.src || location.href;
-		src = src.match(/^([^?#]+)/)[1];
-		__FILENAME__ = src.substring(src.lastIndexOf('/')+1);
-		__BASEURL__ = __FILENAME__? src.replace(new RegExp('\/'+__FILENAME__+'.*'), '/'): src;
-	})();
+	var __FILENAME__, __BASEURL__, __DEFINE_BASEURL__ = './';
 	
 	/*
 	 * 擬似グローバル変数
@@ -30,6 +21,52 @@
 		currentGlobals={};
 	
 	defineCommonModules();
+	rebaseBaseURL();
+	
+	/*
+	 * <script>にdata-baseurl属性を付けると、そのURLをbaseURLとする。
+	 * なければwicker.jsのあるURLがbaseURLとなる。
+	 * data-baseurlはdefineのbaseURLを上書きする。
+	 * defineのbaseURL初期値はドキュメントURL。
+	 * 
+	 * data-main属性があると、その属性値をモジュール名としてdefineする。
+	 */
+	function rebaseBaseURL(){
+		var scripts = document.getElementsByTagName('script'),
+			script = scripts[scripts.length-1],
+			src = script.src || location.href;
+		src = src.match(/^([^?#]+)/)[1];
+		__FILENAME__ = src.substring(src.lastIndexOf('/')+1);
+		
+		var rebase = function(loc, rel){
+			var paths = loc.split('/'),
+				relPaths = rel.split('/'),
+				i;
+			
+			paths.pop();
+			
+			for(i = 0; i < relPaths.length; i++ ){
+				if( relPaths[i] === '..' ){
+					paths.pop();
+				}else if( relPaths[i] !== '.' ){
+					paths.push(relPaths[i]);
+				}
+			}
+			return paths.join('/');
+			
+		};
+		__BASEURL__ = script.getAttribute('data-baseurl');
+		if( __BASEURL__ ){
+			__DEFINE_BASEURL__ = __BASEURL__ = rebase(location.href, __BASEURL__);
+		}else{
+			__BASEURL__ = __FILENAME__? src.replace(new RegExp('\/'+__FILENAME__+'.*'), '/'): src;
+		}
+		
+		var modMain = script.getAttribute('data-main');
+		if( modMain ){
+			define(modMain);
+		}
+	}
 	/*
 	 * 
 	 */
@@ -506,7 +543,10 @@
 			}
 		}
 		
-		carriage( addExt(depends, '.js'), './');
+		carriage( addExt(depends, '.js'), __DEFINE_BASEURL__ );
+		if(name){
+			carriage( addExt([name], '.js'), __DEFINE_BASEURL__ );
+		}
 		factory(name, depends, constructor);
 		
 		name = depends = constructor = null;

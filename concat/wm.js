@@ -1,11 +1,11 @@
-/*! wicker.js modules - 2014-05-12
+/*! wicker.js modules - 2014-05-14
  * (c) 2014 Wicker Wings
  * License: MIT
  ****/
 (function(window, undefined){
 	'use strict';
 	
-	var Version = "ajax 0.1";
+	var Version = "ajax 0.2";
 	
 	function createXHR(){
 		if(window.XMLHttpRequest) {
@@ -65,6 +65,7 @@
 			return null;
 		}
 		o.xhr = xhr;
+		o.url = url;
 		
 		o.thisContext = params.context || xhr;
 		o["200"] = o["304"] = callback || params.success || params.callback || params["200"] || params["304"];
@@ -106,11 +107,11 @@
 		var xhr = o.xhr;
 		if ( xhr.readyState === 4 ){
 			if( xhr.status === 0 ){
-				o["200"].call(context, xhr);
+				o["200"].call(context, xhr, o);
 			}else if( o[xhr.status] ){
-				o[xhr.status].call(context, xhr);
+				o[xhr.status].call(context, xhr, o);
 			}else if( xhr.status !== 200 ){
-				o.failure.call(context, xhr);
+				o.failure.call(context, xhr, o);
 			}
 		}
 	}
@@ -122,7 +123,7 @@
 		return typeof n === 'null';
 	}
 	function isDefined(n){
-		return !isUndefined(n) && isNull(n);
+		return !isUndefined(n) && !isNull(n);
 	}
 	function isString(n){
 		return typeof n === 'string';
@@ -131,11 +132,11 @@
 		return typeof n === 'function';
 	}
 	function isArray(n){
-		return isDefined(n) && !isUndefined(n.length);
+		return isDefined(n) && isDefined(n.length);
 	}
 	
 	/*
-	 * 
+	 * set the default values for XHR
 	 */
 	function setupDefault(params){
 		if( !params ){
@@ -162,25 +163,57 @@
 	}
 	
 	/*
-	 * 
+	 * sereialize(string)
+	 *  パーセントエンコーディングして"?"に連結する
+	 *    "?"+encodeURICoponent(string)
+	 * sereialize(array, key)
+	 *  keyが指定されていればPHP用にkey[]=value を生成
+	 *    "?key[]=array[0]&key[]=array[1]"
+	 *  keyが指定されていなければArrayの添字をkeyとする
+	 *    "?0=array[0]&1=array[1]"
+	 *  配列の各要素がnameプロパティ、valueプロパティを持つオブジェクトであればname=valueを生成
+	 *    [
+	 *      {name: key1, value: val1},
+	 *      {name: key2, value: val2}
+	 *    ]
+	 *    "?key1=val1&key2=val2
+	 * sereialize(object)
+	 *  {key: value}のペアをkey=valueに変換
+	 *    {
+	 *      prop1: value1,
+	 *      prop2: value2
+	 *    }
+	 *    "?prop1=value1&prop2=value2"
 	 */
-	function serialize(src){
+	function serialize(src, arrayKey){
 		var result = [], i, sep = '?';
+		
+		arrayKey = arrayKey?encodeURIComponent(arrayKey)+'[]':'';
+			
+		var fn = function(a, b){
+				if( isString(b) ){
+					result.push( a+'='+encodeURIComponent(b) );
+					
+				}else if( (b.name || b.value) && b.name && b.value ){
+					result.push( encodeURIComponent(b.name)+'='+encodeURIComponent(b.value) );
+					
+				}
+		};
+		
 		if( isString(src) ){
-			return sep+src;
+			return sep+(encodeURIComponent(src));
 		}
 		if( isArray(src) ){
-			return serialize(encodeURIComponent(src.join(',')));
-		}
-		for( i in src ){
-			if( isString(src[i]) ){
-				result.push( encodeURIComponent(i)+'='+encodeURIComponent(src[i]) );
-			}else{
-				result.push( encodeURIComponent(src[i].name)+'='+encodeURIComponent(src[i].value) );
+			for( i=0; i<src.length; i++ ){
+				fn(arrayKey?arrayKey:i, src[i]);
+			}
+		}else{
+			for( i in src ){
+				fn(i, src[i]);
 			}
 		}
 		
-		return seriarize(result.join('&'));
+		return sep+result.join('&');
 	}
 	
 	function noop(){
@@ -189,13 +222,17 @@
 	var accessor = {
 		version: Version,
 		ajax: ajax,
-		serialize: serialize,
-		setupDefault: setupDefault
+		serialize: serialize
 	};
 	
 	
-	if( typeof module === "object" && module && typeof module.exports === "object" ) {
+	if( typeof module === 'object' && typeof module.exports === "object" ) {
 		module.exports = accessor;
+		
+	}else if ( wicker && typeof wicker.factory === "function" ) {
+		wicker.factory('ajax', function(){
+			return accessor;
+		});
 		
 	}else if ( typeof define === "function" && define.amd ) {
 		define('ajax', function(){
@@ -215,11 +252,15 @@
 		sprites,
 		accessor;
 	
-	function Sprite(id, data){
+	function Sprite(id, data, baseURL){
+		baseURL = baseURL.split('/');
+		baseURL.splice(-1);
+		baseURL = baseURL.join('/');
+	
 		this.id = id;
 		this.canvas = null;
 		this.spriteImg = null;
-		this.spriteImgURL = data.src;
+		this.spriteImgURL = baseURL+'/'+data.src;
 		this.spriteData = data;
 		
 		this.initialize();
@@ -325,18 +366,19 @@
 	 * スプライトデータ読み込み失敗
 	 */
 	function onLoadFailure(xhr){
-		console.log('load failure '+xhr.status);
+		wicker.factory("sprite");
+		throw new Error('load failure '+xhr.status);
 	}
 	
 	/* 
 	 * スプライトデータ読み込み完了
 	 * スプライト作成
 	 */
-	function onLoadData(xhr){
+	function onLoadData(xhr, o){
 		var data = JSON.parse(xhr.responseText);
 		var id;
 		for( id in data ){
-			sprites[id] = new Sprite(id, data[id]);
+			sprites[id] = new Sprite(id, data[id], o.url);
 			sprites[id].load();
 		}
 		
@@ -387,7 +429,7 @@
 	
 	accessor = {
 		version: Version,
-		loadData: loadData,
+		load: loadData,
 		getSprite: getSprite
 	};
 	
