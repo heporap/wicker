@@ -12,7 +12,7 @@ Wicker.js has "wicker" namespace.
 * [wicker.carriage()](#wickercarriageurl-baseurl) ... This will loads modules files, as require.confg of "require.js".
 * [wicker.config()](#wickerconfigname-props) ... This will configure default values of modules.
 * [define()](#defineid-depends-constructor) ... This is the same as `define()` of AMD.
-* [require()](#requiredepends-controller) ... Wrapper function for `define()`.
+* [require()](#requiredepends-controller) ... Alias to `define()`.
 * [dab.exports()](#dabexportsid) ... This exports wicker methos to global from namespace.
 
 ======
