@@ -155,7 +155,7 @@ carriage({
   "underscore": "underscore.min.js",
   "jquery": "jquery.min.js"
 });
-require(["Backbone"], function(backbone){
+factory(["Backbone"], function(backbone){
   // use backbone here
 });
 ```
