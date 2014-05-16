@@ -1,5 +1,5 @@
 /*
- * Wicker.js 0.3
+ * Wicker.js 0.3.1
  * 
  * Javascript module loader
  * 
@@ -21,7 +21,7 @@
 		currentGlobals={};
 	
 	defineCommonModules();
-	rebaseBaseURL();
+	normalizeBaseURL();
 	
 	/*
 	 * <script>にdata-baseurl属性を付けると、そのURLをbaseURLとする。
@@ -31,14 +31,14 @@
 	 * 
 	 * data-main属性があると、その属性値をモジュール名としてdefineする。
 	 */
-	function rebaseBaseURL(){
+	function normalizeBaseURL(){
 		var scripts = document.getElementsByTagName('script'),
 			script = scripts[scripts.length-1],
 			src = script.src || location.href;
 		src = src.match(/^([^?#]+)/)[1];
 		__FILENAME__ = src.substring(src.lastIndexOf('/')+1);
 		
-		var rebase = function(loc, rel){
+		var normalize = function(loc, rel){
 			var paths = loc.split('/'),
 				relPaths = rel.split('/'),
 				i;
@@ -57,7 +57,7 @@
 		};
 		__BASEURL__ = script.getAttribute('data-baseurl');
 		if( __BASEURL__ ){
-			__DEFINE_BASEURL__ = __BASEURL__ = rebase(location.href, __BASEURL__);
+			__DEFINE_BASEURL__ = __BASEURL__ = normalize(location.href, __BASEURL__);
 		}else{
 			__BASEURL__ = __FILENAME__? src.replace(new RegExp('\/'+__FILENAME__+'.*'), '/'): src;
 		}
@@ -212,6 +212,7 @@
 		for( id in modules ){
 			mod = modules[id];
 			if( !mod.loaded && mod.url && isLoadedModules(mod.depends) ){
+console.log("script element "+mod.url);
 				script = doc.createElement('script');
 				script.setAttribute('src', mod.url);
 				script.setAttribute('async', 'async');
@@ -243,36 +244,57 @@
 	 * URLからモジュールIDの検証と擬似コンストラクタの生成または実行
 	 */
 	function applyScript(url){
-		var ids = [], id, i, g, mod;
+		var ids = [], id, i, g, mod, lastMod;
 		for(id in modules ){
 			mod = modules[id];
 			if( mod.url === url ){
-				if( lastModID && !modules[lastModID].constructor && !modules[lastModID].initialized ){
-					var tmp = modules[id];
-					mod = modules[id] = modules[lastModID];
-					mod.name = id;
-					mod.url = url;
-					mod.loaded = true;
-					copy(tmp.confs, mod.confs);
-					
-					tmp = null;
-					
-					if( /^wicker/.test(lastModID) ){
-						delete modules[lastModID];
-						continue;
+console.log(lastModID+' '+id+' '+mod.url+' '+url);
+				if( lastModID && lastModID !== id){
+					lastMod = modules[lastModID];
+console.log('['+lastMod.depends.join(',')+']');
+console.log(lastMod.context);
+console.log(!!lastMod.constructor +" "+ !!lastMod.initialized);
+					if( lastMod.constructor && !lastMod.initialized ){
+console.log("the_if "+lastModID+' '+id+' '+url);
+						var tmp = modules[id];
+						mod = modules[id] = lastMod;
+						mod.name = id;
+						mod.url = url;
+						mod.loaded = true;
+						copy(tmp.confs, mod.confs);
+						
+						tmp = null;
+						
+						if( /^wicker/.test(lastModID) ){
+							delete modules[lastModID];
+							lastMod=null;
+							continue;
+						}
+					}else if( !!modules[lastModID].context ){
+console.log("the_else "+lastModID+' '+id+' '+url);
+						mod.context = modules[lastModID].context;
+						mod.initialized = true;
+						
+						if( /^wicker/.test(lastModID) ){
+							delete modules[lastModID];
+							lastMod=null;
+							continue;
+						}
 					}
 					
 				}
 				ids.push(id);
-				
 			}
 		}
 		
+console.log(ids);
 		for( i = 0, g=false; i < ids.length; i++ ){
 			id = ids[i];
 			mod = modules[id];
-			if( !mod.initialized ){
-					
+console.log(id+' '+mod.initialized+' ['+mod.depends.join(',')+']');
+			if( !mod.initialized && isLoadedModules(mod.depends)){
+console.log(id+' initializing');
+				
 				g = adapter(id);
 				if( !mod.constructor ){
 					mod.context = ( window[mod.attach] )? window[mod.attach]: true;
@@ -438,6 +460,7 @@
 		mod = makeModule(id, opt.depends, null, opt);
 		modules[mod.name] = mod;
 		
+console.log(mod.name+' '+mod.url);
 		makeGlobalSim(opt.global, mod.name);
 		
 		if( isDOMContentLoaded ){
@@ -497,13 +520,15 @@
 		if( arguments.length === 1 && name ){
 			lastModID = null;
 			if( adapter(name) ){
-				recallAdapter(name);
+				recallAdapter(name);        
 			}
 			lastModID = name;
+console.log(name);
 			return name;
 		}
 		
 		if( name && modules[name] && modules[name].initialized ){
+console.log(name);
 			return name;
 		}
 		var mod = makeModule(name, depends, constructor, {}, name? modules[name]: null);
@@ -514,10 +539,13 @@
 		}
 		modules[name] = mod;
 		
+console.log(name+' '+modules[name].initialized);
 		lastModID = null;
 		if( adapter(name) ){
 			recallAdapter(name);
 		}
+console.log(name+' '+modules[name].initialized);
+console.log(modules[name].constructor);
 		lastModID = name;
 		
 		return name;
@@ -543,10 +571,12 @@
 			}
 		}
 		
-		carriage( addExt(depends, '.js'), __DEFINE_BASEURL__ );
+		carriage( addExt(depends), __DEFINE_BASEURL__ );
 		if(name){
-			carriage( addExt([name], '.js'), __DEFINE_BASEURL__ );
+			carriage( addExt([name]), __DEFINE_BASEURL__ );
 		}
+console.log("define "+name);
+
 		factory(name, depends, constructor);
 		
 		name = depends = constructor = null;
@@ -763,5 +793,4 @@
 	root.require = require;
 	
 	root.addEventListener('DOMContentLoaded', onDOMContentLoaded, false);
-	
 })(this);

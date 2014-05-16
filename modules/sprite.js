@@ -1,6 +1,6 @@
 /*
  * sprite module for wicker.js
- * ver. 0.2
+ * ver. 0.3
  * 
  * Javascript wicker module
  * 
@@ -69,29 +69,40 @@
 		},
 		/* 
 		 * スプライトデータから画像を作成する
+		 * outputには<img>または<canvas>要素を指定可能。
+		 * outputのサイズがspriteのサイズにリサイズされる。
+		 * 
+		 * canvas-context（canvas.getContext()の戻り値）を渡す時はisContextをtrueにすること。
+		 * この場合、spriteのリサイズは行われない。
 		 */
-		getSprite: function(posID, output){
+		getSprite: function(posID, output, isContext){
 			var canvas,
 				pos = this.spriteData[posID],
-				width = output? output.width: 0,
-				height = output? output.height: 0;
-				
-			output = output || createElement('img');
-			canvas = output.getContext? output: createElement('canvas');
+				width = output && !isContext? output.width: 0,
+				height = output && !isContext? output.height: 0,
+				ctx;
 			
-			var ctx = canvas.getContext('2d');
 			
 			if( !width || !height ){
 				width = pos.w;
 				height = pos.h;
 			}
-			output.width = canvas.width = width;
-			output.height = canvas.height = height;
+			
+			if( isContext ){
+				ctx = output;
+			}else{
+				output = output || createElement('img');
+				canvas = output.getContext? output: createElement('canvas');
+				ctx = canvas.getContext('2d');
+				output.width = canvas.width = width;
+				output.height = canvas.height = height;
+			}
 			
 			ctx.drawImage(this.canvas, pos.x, pos.y, pos.w, pos.h, 0, 0, width, height);
 			
-			if( !output.getContext ){
+			if( !isContext && !output.getContext ){
 				output.src = canvas.toDataURL();
+				canvas = null;
 			}
 			return output;
 			
@@ -188,9 +199,9 @@
 	/* 
 	 * 
 	 */
-	function getSprite(spriteID, posID, output){
+	function getSprite(spriteID, posID, output, isContext){
 		var s= sprites[spriteID];
-		return ( s )? s.getSprite(posID, output): null;
+		return ( s )? s.getSprite(posID, output, isContext): null;
 	}
 	
 	accessor = {
