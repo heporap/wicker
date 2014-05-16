@@ -1,6 +1,6 @@
 /*
  * sprite module for wicker.js
- * ver. 0.3
+ * ver. 0.4
  * 
  * Javascript wicker module
  * 

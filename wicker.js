@@ -212,7 +212,6 @@
 		for( id in modules ){
 			mod = modules[id];
 			if( !mod.loaded && mod.url && isLoadedModules(mod.depends) ){
-console.log("script element "+mod.url);
 				script = doc.createElement('script');
 				script.setAttribute('src', mod.url);
 				script.setAttribute('async', 'async');
@@ -248,14 +247,9 @@ console.log("script element "+mod.url);
 		for(id in modules ){
 			mod = modules[id];
 			if( mod.url === url ){
-console.log(lastModID+' '+id+' '+mod.url+' '+url);
 				if( lastModID && lastModID !== id){
 					lastMod = modules[lastModID];
-console.log('['+lastMod.depends.join(',')+']');
-console.log(lastMod.context);
-console.log(!!lastMod.constructor +" "+ !!lastMod.initialized);
 					if( lastMod.constructor && !lastMod.initialized ){
-console.log("the_if "+lastModID+' '+id+' '+url);
 						var tmp = modules[id];
 						mod = modules[id] = lastMod;
 						mod.name = id;
@@ -271,7 +265,6 @@ console.log("the_if "+lastModID+' '+id+' '+url);
 							continue;
 						}
 					}else if( !!modules[lastModID].context ){
-console.log("the_else "+lastModID+' '+id+' '+url);
 						mod.context = modules[lastModID].context;
 						mod.initialized = true;
 						
@@ -287,13 +280,10 @@ console.log("the_else "+lastModID+' '+id+' '+url);
 			}
 		}
 		
-console.log(ids);
 		for( i = 0, g=false; i < ids.length; i++ ){
 			id = ids[i];
 			mod = modules[id];
-console.log(id+' '+mod.initialized+' ['+mod.depends.join(',')+']');
 			if( !mod.initialized && isLoadedModules(mod.depends)){
-console.log(id+' initializing');
 				
 				g = adapter(id);
 				if( !mod.constructor ){
@@ -460,7 +450,6 @@ console.log(id+' initializing');
 		mod = makeModule(id, opt.depends, null, opt);
 		modules[mod.name] = mod;
 		
-console.log(mod.name+' '+mod.url);
 		makeGlobalSim(opt.global, mod.name);
 		
 		if( isDOMContentLoaded ){
@@ -523,12 +512,10 @@ console.log(mod.name+' '+mod.url);
 				recallAdapter(name);        
 			}
 			lastModID = name;
-console.log(name);
 			return name;
 		}
 		
 		if( name && modules[name] && modules[name].initialized ){
-console.log(name);
 			return name;
 		}
 		var mod = makeModule(name, depends, constructor, {}, name? modules[name]: null);
@@ -539,13 +526,10 @@ console.log(name);
 		}
 		modules[name] = mod;
 		
-console.log(name+' '+modules[name].initialized);
 		lastModID = null;
 		if( adapter(name) ){
 			recallAdapter(name);
 		}
-console.log(name+' '+modules[name].initialized);
-console.log(modules[name].constructor);
 		lastModID = name;
 		
 		return name;
@@ -575,7 +559,6 @@ console.log(modules[name].constructor);
 		if(name){
 			carriage( addExt([name]), __DEFINE_BASEURL__ );
 		}
-console.log("define "+name);
 
 		factory(name, depends, constructor);
 		
