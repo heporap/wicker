@@ -1,6 +1,6 @@
 {
   "name": "wicker.js",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Javascript module loader",
   "repository": "https://github.com/heporap/wicker",
   "homepage": "https://github.com/heporap/wicker/wiki",

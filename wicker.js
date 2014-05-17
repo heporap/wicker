@@ -1,5 +1,5 @@
 /*
- * Wicker.js 0.3.2
+ * Wicker.js 0.3.3
  * 
  * Javascript module loader
  * 
@@ -10,7 +10,7 @@
 (function(root, undefined) {
 	'use strict';
 	var __FILENAME__, __BASEURL__, __DEFINE_BASEURL__ = './';
-	
+	var document = window.document;
 	/*
 	 * 擬似グローバル変数
 	 */
@@ -43,11 +43,26 @@
 	 *     wicker:http://example.com/modules/
 	 * 
 	 * <script>にdata-main属性を付けると、その属性値をモジュール名としてdefineする。
+	 * 
+	 * defer async属性はファイル名がwicker.jsに限る。
+	 * 実行ファイルをロードするタイミングの問題から、data-main属性による実行が必須となる。
 	 */
 	function normalizeBaseURL(){
 		var scripts = document.getElementsByTagName('script'),
 			script = scripts[scripts.length-1],
-			src = script.src || location.href;
+			src = script.src || location.href,
+			i;
+		
+		if( document.body ){
+			for( i = 0; i < scripts.length; i++ ){
+				if( /wicker\.js/.test(scripts[i].src) ){
+					script = scripts[i];
+					break;
+				}
+			}
+			src = script.src;
+		}
+		
 		src = src.match(/^([^?#]+)/)[1];
 		__FILENAME__ = src.substring(src.lastIndexOf('/')+1);
 		src = __FILENAME__? src.replace(new RegExp('\/'+__FILENAME__+'.*'), '/'): src;
@@ -215,7 +230,13 @@
 		if( !isDOMContentLoaded ){
 			isDOMContentLoaded = true;
 			lastModID=null;
-			root.removeEventListener('DOMContentLoaded', onDOMContentLoaded, false);
+			if( root.removeEventListener ){
+				document.removeEventListener('DOMContentLoaded', onDOMContentLoaded, false);
+				root.removeEventListener('load', onDOMContentLoaded, false);
+			}
+			if( document.detachEvent ){
+				document.detachEvent('onload', onDOMContentLoaded);
+			}
 		}
 		
 		var id, mod, g, gs;
@@ -804,5 +825,19 @@
 	root.define.amd = {};
 	root.require = require;
 	
-	root.addEventListener('DOMContentLoaded', onDOMContentLoaded, false);
+	function preDOMContentLoaded(){
+			if (document.readyState == "complete") {
+				onDOMContentLoaded();
+				document.detachEvent('onreadystatechange', preDOMContentLoaded);
+			}
+	}
+	
+	if( root.addEventListener ){
+		document.addEventListener('DOMContentLoaded', onDOMContentLoaded, false);
+		root.addEventListener('load', onDOMContentLoaded, false);
+	}
+	if( document.attachEvent ){
+		document.attachEvent('onreadystatechange', preDOMContentLoaded);
+		document.attachEvent('onload', onDOMContentLoaded);
+	}
 })(this);
