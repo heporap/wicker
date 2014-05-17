@@ -1,6 +1,6 @@
 /*
  * sprite module for wicker.js
- * ver. 0.4
+ * ver. 0.4.1
  * 
  * Javascript wicker module
  * 
@@ -11,7 +11,7 @@
 (function(window, undefined){
 	'use strict';
 	
-	var Version = 'Sprite 0.2';
+	var Version = 'Sprite 0.4.1';
 	
 	var defaultValues = {},
 		$ajax,
@@ -19,16 +19,11 @@
 		accessor;
 	
 	function Sprite(id, data, baseURL){
-		baseURL = baseURL.split('/');
-		baseURL.splice(-1);
-		baseURL = baseURL.join('/');
-	
 		this.id = id;
 		this.canvas = null;
 		this.spriteImg = null;
-		this.spriteImgURL = baseURL+'/'+data.src;
+		this.spriteImgURL = normalizeURL(baseURL, data.src);
 		this.spriteData = data;
-		
 		this.initialize();
 		
 	}
@@ -111,7 +106,36 @@
 	};
 	
 	/* 
-	 * 
+	 * baseURLとrelURLの結合
+	 * ref: wicker.js
+	 */
+	var normalizeURL = function(loc, rel){
+			var paths = loc.split('/'),
+				relPaths = rel.split('/'),
+				i;
+			
+			i=rel.indexOf('://');
+			if( i!==-1 ){
+				return ( i===0 )?location.protocol.replace(/:$/, '')+rel: rel;
+			}else if( rel.indexOf('/')===0 ){
+				return loc.match(/(^.+:\/\/[^/]*)/)[1]+rel;
+			}
+			
+			paths.pop();
+			
+			for(i = 0; i < relPaths.length; i++ ){
+				if( relPaths[i] === '..' ){
+					paths.pop();
+				}else if( relPaths[i] !== '.' ){
+					paths.push(relPaths[i]);
+				}
+			}
+			return paths.join('/');
+		
+	};
+		
+	/* 
+	 * create HTMLElement
 	 */
 	function createElement(tagName){
 		return document.createElement(tagName);
@@ -131,9 +155,6 @@
 		if( spriteDataURL ){
 		
 			$ajax.ajax(spriteDataURL, '', {success: onLoadData, failure: onLoadFailure});
-			
-		}else{
-			wicker.factory("sprite");
 			
 		}
 		
@@ -169,7 +190,6 @@
 		
 		sprites[imgID].loaded = true;
 		sprites[imgID].create();
-//		create(imgID);
 		
 		for( id in sprites ){
 			result = result && sprites[id].loaded;
@@ -178,22 +198,6 @@
 		if( result ){
 			wicker.factory("sprite");
 		}
-	}
-	
-	/* 
-	 * 
-	 *
-	function create(id){
-		var canvas,
-			sprite = sprites[id];
-		
-		sprite.canvas = canvas = createElement('canvas');
-		
-		canvas.width = sprite.spriteImg.width;
-		canvas.height = sprite.spriteImg.height;
-		
-		canvas.getContext('2d').drawImage(sprite.spriteImg, 0, 0);
-		
 	}
 	
 	/* 

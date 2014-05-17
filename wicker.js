@@ -1,5 +1,5 @@
 /*
- * Wicker.js 0.3.1
+ * Wicker.js 0.3.2
  * 
  * Javascript module loader
  * 
@@ -24,12 +24,25 @@
 	normalizeBaseURL();
 	
 	/*
-	 * <script>にdata-baseurl属性を付けると、そのURLをbaseURLとする。
-	 * なければwicker.jsのあるURLがbaseURLとなる。
-	 * data-baseurlはdefineのbaseURLを上書きする。
-	 * defineのbaseURL初期値はドキュメントURL。
+	 * <script>にdata-baseurl属性を付けると、その属性値をbaseURLとする。
+	 * 相対パスはドキュメントのURLを基準とする。
+	 * 属性がなければwicker.jsのあるURLをwicker.factoryのbaseURL初期値とする。
 	 * 
-	 * data-main属性があると、その属性値をモジュール名としてdefineする。
+	 * defineのbaseURL初期値はドキュメントURL。
+	 * data-baseurl属性はdefineのbaseURLを上書きする。
+	 * 
+	 * data-baseurlに特殊キーワード "wicker:" を指定する事で、wicker.jsのURLをbaseURLとする。（defineの初期値を上書きする。）
+	 *  ":" 記号がない場合は ./wicker と同義。
+	 * urlを続ける事で、wicker.jsのパスから相対パスを規定値に使用する。
+	 * 例） "wicker:modules/"
+	 * 
+	 * urlは相対パス、絶対パス、絶対URL（プロトコルあり、なし）のいずれかを取る。
+	 * 例) wicker:modules/
+	 *     wicker:/modules/
+	 *     wicker:://example.com/modules/
+	 *     wicker:http://example.com/modules/
+	 * 
+	 * <script>にdata-main属性を付けると、その属性値をモジュール名としてdefineする。
 	 */
 	function normalizeBaseURL(){
 		var scripts = document.getElementsByTagName('script'),
@@ -37,11 +50,19 @@
 			src = script.src || location.href;
 		src = src.match(/^([^?#]+)/)[1];
 		__FILENAME__ = src.substring(src.lastIndexOf('/')+1);
+		src = __FILENAME__? src.replace(new RegExp('\/'+__FILENAME__+'.*'), '/'): src;
 		
 		var normalize = function(loc, rel){
 			var paths = loc.split('/'),
 				relPaths = rel.split('/'),
 				i;
+			
+			i=rel.indexOf('://');
+			if( i!==-1 ){
+				return ( i===0 )?location.protocol.replace(/:$/, '')+rel: rel;
+			}else if( rel.indexOf('/')===0 ){
+				return loc.match(/(^.+:\/\/[^/]*)/)[1]+rel;
+			}
 			
 			paths.pop();
 			
@@ -55,13 +76,19 @@
 			return paths.join('/');
 			
 		};
+		
 		__BASEURL__ = script.getAttribute('data-baseurl');
 		if( __BASEURL__ ){
-			__DEFINE_BASEURL__ = __BASEURL__ = normalize(location.href, __BASEURL__);
+			if( __BASEURL__.match( /^wicker:(.*)/ ) ){
+				__BASEURL__ = RegExp.$1;
+			}else{
+				src = location.href;
+			}
+			__DEFINE_BASEURL__ = __BASEURL__ = normalize(src, __BASEURL__);
 		}else{
-			__BASEURL__ = __FILENAME__? src.replace(new RegExp('\/'+__FILENAME__+'.*'), '/'): src;
+			__BASEURL__ = src;
+			__DEFINE_BASEURL__ = './';
 		}
-		
 		var modMain = script.getAttribute('data-main');
 		if( modMain ){
 			define(modMain);
@@ -109,7 +136,6 @@
 			
 			module.config(oldMod.confs);
 		}
-		
 		return module;
 	}
 	
@@ -188,6 +214,7 @@
 	function onDOMContentLoaded(){
 		if( !isDOMContentLoaded ){
 			isDOMContentLoaded = true;
+			lastModID=null;
 			root.removeEventListener('DOMContentLoaded', onDOMContentLoaded, false);
 		}
 		
@@ -261,7 +288,7 @@
 						
 						if( /^wicker/.test(lastModID) ){
 							delete modules[lastModID];
-							lastMod=null;
+							lastModID=lastMod=null;
 							continue;
 						}
 					}else if( !!modules[lastModID].context ){
@@ -270,9 +297,11 @@
 						
 						if( /^wicker/.test(lastModID) ){
 							delete modules[lastModID];
-							lastMod=null;
+							lastModID=lastMod=null;
+							recallAdapter(id);
 							continue;
 						}
+						
 					}
 					
 				}
