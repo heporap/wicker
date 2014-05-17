@@ -12,7 +12,7 @@ Wicker.js は "wicker" namespace を使用します。
 * [wicker.carriage()](#wickercarriageurl-baseurl) … モジュールファイルをロード。require.jsのrequire.configに相当。
 * [wicker.config()](#wickerconfigname-props) … モジュールのコンフィギュレーションを行います。初期設定値などを指定したい時に。
 * [define()](#defineid-depends-constructor) … AMDのdefineと同等。
-* [require()](#requiredepends-controller) … define()へのラッパー。
+* [require()](#requiredepends-controller) … define()へのエイリアス。
 * [dab.exports()](#dabexportsid) … namespaceをグローバル関数にエクスポートします。
 
 ======
