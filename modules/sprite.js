@@ -215,7 +215,8 @@
 	};
 	
 	if( window.wicker ){
-		define(['ajax'],{});
+		wicker.carriage('ajax.js', 'module:');
+		//define(['ajax'],{});
 		wicker.factory('sprite', ['ajax'], function(aj){
 			defaultValues = this;
 			$ajax = aj;

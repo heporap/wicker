@@ -1,5 +1,5 @@
 /*
- * Wicker.js 0.3.3
+ * Wicker.js 0.3.4
  * 
  * Javascript module loader
  * 
@@ -89,7 +89,7 @@
 	}
 	
 	/*
-	 * 
+	 * baseURLと相対パスから絶対URLを生成
 	 */
 	function normalizePath(loc, rel){
 		var paths = loc.split('/'),
@@ -118,7 +118,11 @@
 	
 
 	/*
-	 * 
+	 * モジュールの生成
+	 * URLの扱い
+	 * "wicker:" から始まるパス：wicker.jsのURLをbaseURLとして相対パス
+	 * "module:" から始まるパス：define/factoryを呼び出したモジュールのURLをbaseURLとして相対パス
+	 * 呼び出しモジュールのURLを認識できない場合はscript.onloadでの処理を期待する
 	 */
 	function makeModule(id, depends, constructor, opt, oldMod){
 		function Module(id, depends, constructor, url, attach){
@@ -144,7 +148,7 @@
 			}
 		};
 		
-		if( !id ){
+		if( !isDefined(id) ){
 			id = 'wicker_'+modCount++;
 		}
 		
@@ -264,10 +268,13 @@
 			
 			}
 		
-		
 		for( id in modules ){
 			mod = modules[id];
 			if( !mod.loaded && mod.url && isLoadedModules(mod.depends) ){
+				// wicker: module: から始まるURLはURLを調整するため待機
+				if( /^wicker:|^module:/.test(mod.url) ){
+					continue;
+				}
 				script = doc.createElement('script');
 				script.setAttribute('src', mod.url);
 				script.setAttribute('async', 'async');
@@ -302,6 +309,11 @@
 		var ids = [], id, i, g, mod, lastMod;
 		for(id in modules ){
 			mod = modules[id];
+			if( /^wicker:|^module:/.test(mod.url) ){
+				mod.url = normalizePath(url, mod.url.match(/^(?:wicker:|module:)(.*)/)[1]);
+				continue;
+			}
+		
 			if( mod.url === url ){
 				if( lastModID && lastModID !== id){
 					lastMod = modules[lastModID];
@@ -461,7 +473,7 @@
 			createScript(id, baseURL+url, opt);
 			
 		}else{
-			baseURL = arg.baseURL || baseURL || __BASEURL__;
+			baseURL = arg.baseURL || baseURL;
 			
 			var paths = arg.paths || arg;
 			for( id in paths ){
@@ -680,7 +692,7 @@
 	}
 	/*
 	 * モジュールを使っての呼び出し
-	 */
+	 *
 	function manufacture(depends, controller){
 		factory(null, depends, controller);
 	}
@@ -826,7 +838,7 @@
 	root.wicker = wicker;
 	
 	wicker.factory = factory;
-	wicker.manufacture = manufacture;
+	wicker.manufacture = factory;
 	wicker.carriage = carriage;
 	wicker.config = config;
 	root.define = define;

@@ -1,18 +1,18 @@
-/*! wicker.js modules - 2014-05-17
+/*! wicker.js modules - 2014-05-19
  * (c) 2014 Wicker Wings
  * License: MIT
  ****/
 (function(window, undefined){
 	'use strict';
 	
-	var Version = "ajax 0.2";
+	var Version = 'ajax 0.2';
 	
 	function createXHR(){
 		if(window.XMLHttpRequest) {
 			return new XMLHttpRequest();
 		} else if(window.ActiveXObject) {
 			try {
-				return new ActiveXObject("Msxml2.XMLHTTP");
+				return new ActiveXObject('Msxml2.XMLHTTP');
 			} catch(e) {
 				return null;
 			}
@@ -68,13 +68,13 @@
 		o.url = url;
 		
 		o.thisContext = params.context || xhr;
-		o["200"] = o["304"] = callback || params.success || params.callback || params["200"] || params["304"];
+		o['200'] = o['304'] = callback || params.success || params.callback || params['200'] || params['304'];
 		o.failure = params.failure || noop;
 		o.progress = params.progress || noop;
 		
 		xhr.onreadystatechange = function(){ processAjax(o.thisContext, o); };
 		if( params.progress ){
-			xhr.addEventListener("progress", function(evt){ progressAjax(params.context, o, evt); } );
+			xhr.addEventListener('progress', function(evt){ progressAjax(params.context, o, evt); } );
 		}
 		
 		xhr.open(params.method, url, params.async, params.user, params.password);
@@ -107,7 +107,7 @@
 		var xhr = o.xhr;
 		if ( xhr.readyState === 4 ){
 			if( xhr.status === 0 ){
-				o["200"].call(context, xhr, o);
+				o['200'].call(context, xhr, o);
 			}else if( o[xhr.status] ){
 				o[xhr.status].call(context, xhr, o);
 			}else if( xhr.status !== 200 ){
@@ -142,19 +142,19 @@
 		if( !params ){
 			params = {};
 		}
-		params.method = params.method || "GET";
-		params.postData = params.postData || "";
+		params.method = params.method || 'GET';
+		params.postData = params.postData || '';
 		params.async = isDefined(params.async)? params.async: true;
-		params.user = params.user || "";
-		params.password = params.password || "";
-		params.enctype = params.enctype || "";
+		params.user = params.user || '';
+		params.password = params.password || '';
+		params.enctype = params.enctype || '';
 		params.headers = params.headers || [];
-		params.enctype = params.enctype || "applecation/x-www-form-urlencoded";
+		params.enctype = params.enctype || 'applecation/x-www-form-urlencoded';
 		
 		params.method = params.method.toUpperCase();
 		
-		if( params.method !== "GET" && params.method !== "POST" && params.method !== "HEAD" ){
-			throw new Error("This ajax library does not support this method: "+params.method);
+		if( params.method !== 'GET' && params.method !== 'POST' && params.method !== 'HEAD' ){
+			throw new Error('This ajax library does not support this method: '+params.method);
 		}
 		
 		params.postData = serialize(params.postData);
@@ -164,8 +164,8 @@
 	
 	/*
 	 * sereialize(string)
-	 *  パーセントエンコーディングして"?"に連結する
-	 *    "?"+encodeURICoponent(string)
+	 *  パーセントエンコーディングして'?'に連結する
+	 *    '?'+encodeURICoponent(string)
 	 * sereialize(array, key)
 	 *  keyが指定されていればPHP用にkey[]=value を生成
 	 *    "?key[]=array[0]&key[]=array[1]"
@@ -176,7 +176,7 @@
 	 *      {name: key1, value: val1},
 	 *      {name: key2, value: val2}
 	 *    ]
-	 *    "?key1=val1&key2=val2
+	 *    "?key1=val1&key2=val2"
 	 * sereialize(object)
 	 *  {key: value}のペアをkey=valueに変換
 	 *    {
@@ -226,19 +226,20 @@
 	};
 	
 	
-	if( typeof module === 'object' && typeof module.exports === "object" ) {
+	if( typeof module === 'object' && typeof module.exports === 'object' ) {
 		module.exports = accessor;
 		
-	}else if ( wicker && typeof wicker.factory === "function" ) {
-		wicker.factory('ajax', function(){
+	}else if ( window.wicker && typeof window.wicker.factory === 'function' ) {
+		window.wicker.factory('ajax', function(){
 			return accessor;
 		});
 		
-	}else if ( typeof define === "function" && define.amd ) {
+	}else if ( typeof define === 'function' && define.amd ) {
 		define('ajax', function(){
 			return accessor;
 		});
-	}else if ( typeof window === "object" && typeof window.document === "object" ) {
+	}else if ( typeof window === 'object' && typeof window.document === 'object' ) {
+		window.dab = window.dab || {};
 		window.dab.ajax = accessor;
 	}
 })(this);
@@ -377,7 +378,7 @@
 	
 	/* 
 	 * スプライトデータを読み込み開始
-	 * "ajax" モジュール使用
+	 * 'ajax' モジュール使用
 	 * defaultValues.spriteDataURL
 	 */
 	function loadData(spriteDataURL){
@@ -398,7 +399,7 @@
 	 * スプライトデータ読み込み失敗
 	 */
 	function onLoadFailure(xhr){
-		wicker.factory("sprite");
+		wicker.factory('sprite');
 		throw new Error('load failure '+xhr.status);
 	}
 	
@@ -430,7 +431,7 @@
 		}
 		
 		if( result ){
-			wicker.factory("sprite");
+			wicker.factory('sprite');
 		}
 	}
 	
@@ -449,6 +450,8 @@
 	};
 	
 	if( window.wicker ){
+		wicker.carriage('ajax.js', 'module:');
+		//define(['ajax'],{});
 		wicker.factory('sprite', ['ajax'], function(aj){
 			defaultValues = this;
 			$ajax = aj;
@@ -461,7 +464,7 @@
 			return accessor;
 			
 		});
-	}else if ( typeof window === "object" && typeof window.document === "object" ) {
+	}else if ( typeof window === 'object' && typeof window.document === 'object' ) {
 		$ajax = window.dab.ajax;
 		window.dab.sprite = accessor;
 	}
