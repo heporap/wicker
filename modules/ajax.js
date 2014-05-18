@@ -235,8 +235,8 @@
 	if( typeof module === 'object' && typeof module.exports === "object" ) {
 		module.exports = accessor;
 		
-	}else if ( wicker && typeof wicker.factory === "function" ) {
-		wicker.factory('ajax', function(){
+	}else if ( window.wicker && typeof window.wicker.factory === "function" ) {
+		window.wicker.factory('ajax', function(){
 			return accessor;
 		});
 		
