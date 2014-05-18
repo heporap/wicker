@@ -1,6 +1,6 @@
 /*
  * ajax module for wicker.js
- * ver. 0.2
+ * ver. 0.2.1
  * 
  * Javascript wicker module
  * 
@@ -245,6 +245,7 @@
 			return accessor;
 		});
 	}else if ( typeof window === "object" && typeof window.document === "object" ) {
+		window.dab = window.dab || {};
 		window.dab.ajax = accessor;
 	}
 })(this);
