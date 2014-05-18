@@ -143,7 +143,7 @@
 	
 	/* 
 	 * スプライトデータを読み込み開始
-	 * "ajax" モジュール使用
+	 * 'ajax' モジュール使用
 	 * defaultValues.spriteDataURL
 	 */
 	function loadData(spriteDataURL){
@@ -164,7 +164,7 @@
 	 * スプライトデータ読み込み失敗
 	 */
 	function onLoadFailure(xhr){
-		wicker.factory("sprite");
+		wicker.factory('sprite');
 		throw new Error('load failure '+xhr.status);
 	}
 	
@@ -196,7 +196,7 @@
 		}
 		
 		if( result ){
-			wicker.factory("sprite");
+			wicker.factory('sprite');
 		}
 	}
 	
@@ -215,6 +215,7 @@
 	};
 	
 	if( window.wicker ){
+		define(['ajax'],{});
 		wicker.factory('sprite', ['ajax'], function(aj){
 			defaultValues = this;
 			$ajax = aj;
@@ -227,7 +228,7 @@
 			return accessor;
 			
 		});
-	}else if ( typeof window === "object" && typeof window.document === "object" ) {
+	}else if ( typeof window === 'object' && typeof window.document === 'object' ) {
 		$ajax = window.dab.ajax;
 		window.dab.sprite = accessor;
 	}

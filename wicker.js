@@ -9,6 +9,9 @@
  */
 (function(root, undefined) {
 	'use strict';
+	var CONST_REQUIRE = 'require',
+		CONST_EXPORTS = 'exports',
+		CONST_MODULE = 'module';
 	var __FILENAME__, __BASEURL__, __DEFINE_BASEURL__ = './';
 	var document = window.document;
 	/*
@@ -34,13 +37,13 @@
 	 * data-baseurlに特殊キーワード "wicker:" を指定する事で、wicker.jsのURLをbaseURLとする。（defineの初期値を上書きする。）
 	 *  ":" 記号がない場合は ./wicker と同義。
 	 * urlを続ける事で、wicker.jsのパスから相対パスを規定値に使用する。
-	 * 例） "wicker:modules/"
+	 * 例） data-baseurl="wicker:modules/"
 	 * 
 	 * urlは相対パス、絶対パス、絶対URL（プロトコルあり、なし）のいずれかを取る。
-	 * 例) wicker:modules/
-	 *     wicker:/modules/
-	 *     wicker:://example.com/modules/
-	 *     wicker:http://example.com/modules/
+	 * 例) data-baseurl="wicker:modules/"
+	 *     data-baseurl="wicker:/modules/"
+	 *     data-baseurl="wicker:://example.com/modules/"
+	 *     data-baseurl="wicker:http://example.com/modules/"
 	 * 
 	 * <script>にdata-main属性を付けると、その属性値をモジュール名としてdefineする。
 	 * 
@@ -67,31 +70,6 @@
 		__FILENAME__ = src.substring(src.lastIndexOf('/')+1);
 		src = __FILENAME__? src.replace(new RegExp('\/'+__FILENAME__+'.*'), '/'): src;
 		
-		var normalize = function(loc, rel){
-			var paths = loc.split('/'),
-				relPaths = rel.split('/'),
-				i;
-			
-			i=rel.indexOf('://');
-			if( i!==-1 ){
-				return ( i===0 )?location.protocol.replace(/:$/, '')+rel: rel;
-			}else if( rel.indexOf('/')===0 ){
-				return loc.match(/(^.+:\/\/[^/]*)/)[1]+rel;
-			}
-			
-			paths.pop();
-			
-			for(i = 0; i < relPaths.length; i++ ){
-				if( relPaths[i] === '..' ){
-					paths.pop();
-				}else if( relPaths[i] !== '.' ){
-					paths.push(relPaths[i]);
-				}
-			}
-			return paths.join('/');
-			
-		};
-		
 		__BASEURL__ = script.getAttribute('data-baseurl');
 		if( __BASEURL__ ){
 			if( __BASEURL__.match( /^wicker:(.*)/ ) ){
@@ -99,7 +77,7 @@
 			}else{
 				src = location.href;
 			}
-			__DEFINE_BASEURL__ = __BASEURL__ = normalize(src, __BASEURL__);
+			__DEFINE_BASEURL__ = __BASEURL__ = normalizePath(src, __BASEURL__);
 		}else{
 			__BASEURL__ = src;
 			__DEFINE_BASEURL__ = './';
@@ -109,6 +87,36 @@
 			define(modMain);
 		}
 	}
+	
+	/*
+	 * 
+	 */
+	function normalizePath(loc, rel){
+		var paths = loc.split('/'),
+			relPaths = rel.split('/'),
+			i;
+		
+		i=rel.indexOf('://');
+		if( i!==-1 ){
+			return ( i===0 )?location.protocol.replace(/:$/, '')+rel: rel;
+		}else if( rel.indexOf('/')===0 ){
+			return loc.match(/(^.+:\/\/[^/]*)/)[1]+rel;
+		}
+		
+		paths.pop();
+		
+		for(i = 0; i < relPaths.length; i++ ){
+			if( relPaths[i] === '..' ){
+				paths.pop();
+			}else if( relPaths[i] !== '.' ){
+				paths.push(relPaths[i]);
+			}
+		}
+		return paths.join('/');
+		
+	}
+	
+
 	/*
 	 * 
 	 */
@@ -140,7 +148,7 @@
 			id = 'wicker_'+modCount++;
 		}
 		
-		var url = isString(opt)? opt: opt? opt.url: "";
+		var url = isString(opt)? opt: opt? opt.url: '';
 		var attach = isString(opt)? id: opt && opt.attach? opt.attach: id;
 		
 		var module = new Module(id, depends||[], constructor, url, attach);
@@ -536,7 +544,7 @@
 	 * factory(name:String);
 	 */
 	function factory(){
-		var name = null, depends = ['require', 'exports', 'module'], constructor, confs,
+		var name = null, depends = [CONST_REQUIRE, CONST_EXPORTS, CONST_MODULE], constructor, confs,
 			i;
 		
 		for(i = 0; i < arguments.length; i++ ){
@@ -589,7 +597,7 @@
 	 * compatibility with AMD
 	 */
 	function define(){
-		var name = null, depends = ['require', 'exports', 'module'], constructor,
+		var name = null, depends = [CONST_REQUIRE, CONST_EXPORTS, CONST_MODULE], constructor,
 			i;
 		var mk = function(o){ return function(){return o;}; };
 		
@@ -700,20 +708,20 @@
 	/*
 	 * define "require", "exports", "module" modules
 	 * require: 
-	 *   compatible CommonJS require("")
+	 *   compatible CommonJS require('')
 	 * exports: 
 	 *   define()のconstructorの中でexportsのプロパティに代入した内容がモジュールcontextとして保存される。
 	 * module: 
 	 *   How does it work?
 	 */
 	function defineCommonModules(){
-		factory('require', [], function(){
+		factory(CONST_REQUIRE, [], function(){
 			return function(id){
 				return (modules[id])? modules[id].context: null;
 			};
 		});
 		
-		factory('exports', [], function(){
+		factory(CONST_EXPORTS, [], function(){
 			function Exports(){}
 			Exports.prototype.clear = function(){
 				for(var key in this ){
@@ -733,7 +741,7 @@
 			return new Exports();
 		});
 		
-		factory('module', [], function(){
+		factory(CONST_MODULE, [], function(){
 			return {};
 		});
 		
@@ -826,7 +834,7 @@
 	root.require = require;
 	
 	function preDOMContentLoaded(){
-			if (document.readyState == "complete") {
+			if (document.readyState == 'complete') {
 				onDOMContentLoaded();
 				document.detachEvent('onreadystatechange', preDOMContentLoaded);
 			}
