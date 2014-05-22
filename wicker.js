@@ -1,5 +1,5 @@
 /*
- * Wicker.js 0.3.4
+ * Wicker.js 0.3.5
  * 
  * Javascript module loader
  * 
@@ -315,7 +315,7 @@
 			}
 		
 			if( mod.url === url ){
-				if( lastModID && lastModID !== id){
+				if( lastModID && /^wicker/.test(lastModID) && lastModID !== id){
 					lastMod = modules[lastModID];
 					if( lastMod.constructor && !lastMod.initialized ){
 						var tmp = modules[id];
@@ -327,23 +327,18 @@
 						
 						tmp = null;
 						
-						if( /^wicker/.test(lastModID) ){
-							delete modules[lastModID];
-							lastModID=lastMod=null;
-							continue;
-						}
+						delete modules[lastModID];
+						lastModID=lastMod=null;
 					}else if( !!modules[lastModID].context ){
 						mod.context = modules[lastModID].context;
 						mod.initialized = true;
 						
-						if( /^wicker/.test(lastModID) ){
-							delete modules[lastModID];
-							lastModID=lastMod=null;
-							recallAdapter(id);
-							continue;
-						}
+						delete modules[lastModID];
+						lastModID=lastMod=null;
+						recallAdapter(id);
 						
 					}
+					continue;
 					
 				}
 				ids.push(id);
