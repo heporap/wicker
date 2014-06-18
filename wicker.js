@@ -86,8 +86,6 @@
 		modMain = script.getAttribute('data-main');
 		if( modMain ){
 			carriage(addExt([modMain]));
-//			carriage({modMain:addExt([modMain])});
-//			define(!/\.js$/.test(d)?modMain:null, [modMain],{});
 		}
 	}
 	
@@ -624,36 +622,7 @@
 			constructor = (function(o){ return function(){return o;}; }(constructor));
 		}
 
-console.log(name+'; '+depends.join(','));
 		carriage( addExt(depends), __DEFINE_BASEURL__ );
-		
-		factory(name, depends, constructor);
-		
-		name = depends = constructor = null;
-		
-	}
-/*	function define(){
-		var name = null, depends = [CONST_REQUIRE, CONST_EXPORTS, CONST_MODULE], constructor,
-			i;
-		var mk = function(o){ return function(){return o;}; };
-		
-		for(i = 0; i < arguments.length; i++ ){
-			if( isString( arguments[i] ) ){
-				name = arguments[i];
-			}else if( isArray(arguments[i]) ){
-				depends = arguments[i];
-			}else if( isFunction(arguments[i]) ){
-				constructor = arguments[i];
-			}else if( !!arguments[i] ){
-				constructor = mk(arguments[i]);
-			}
-		}
-		
-console.log(name+'; '+depends.join(','));
-		carriage( addExt(depends), __DEFINE_BASEURL__ );
-//		if(name){
-//			carriage( addExt([name]), __DEFINE_BASEURL__ );
-//		}
 		
 		factory(name, depends, constructor);
 		
