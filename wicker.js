@@ -1,5 +1,5 @@
 /*
- * Wicker.js 0.3.5
+ * Wicker.js 0.3.6
  * 
  * Javascript module loader
  * 
@@ -54,6 +54,7 @@
 		var scripts = document.getElementsByTagName('script'),
 			script = scripts[scripts.length-1],
 			src = script.src || location.href,
+			modMain,
 			i;
 		
 		if( document.body ){
@@ -82,9 +83,11 @@
 			__BASEURL__ = src;
 			__DEFINE_BASEURL__ = './';
 		}
-		var modMain = script.getAttribute('data-main');
+		modMain = script.getAttribute('data-main');
 		if( modMain ){
-			define(modMain);
+			carriage(addExt([modMain]));
+//			carriage({modMain:addExt([modMain])});
+//			define(!/\.js$/.test(d)?modMain:null, [modMain],{});
 		}
 	}
 	
@@ -606,6 +609,32 @@
 	function define(){
 		var name = null, depends = [CONST_REQUIRE, CONST_EXPORTS, CONST_MODULE], constructor,
 			i;
+		
+		for(i = 0; i < arguments.length; i++ ){
+			if( isString( arguments[i] ) ){
+				name = arguments[i];
+			}else if( isArray(arguments[i]) ){
+				depends = arguments[i];
+			}else if( !!arguments[i] ){
+				constructor = arguments[i];
+			}
+		}
+		
+		if( !isFunction(arguments[i]) ){
+			constructor = (function(o){ return function(){return o;}; }(constructor));
+		}
+
+console.log(name+'; '+depends.join(','));
+		carriage( addExt(depends), __DEFINE_BASEURL__ );
+		
+		factory(name, depends, constructor);
+		
+		name = depends = constructor = null;
+		
+	}
+/*	function define(){
+		var name = null, depends = [CONST_REQUIRE, CONST_EXPORTS, CONST_MODULE], constructor,
+			i;
 		var mk = function(o){ return function(){return o;}; };
 		
 		for(i = 0; i < arguments.length; i++ ){
@@ -616,15 +645,16 @@
 			}else if( isFunction(arguments[i]) ){
 				constructor = arguments[i];
 			}else if( !!arguments[i] ){
-				constructor = mk(constructor);
+				constructor = mk(arguments[i]);
 			}
 		}
 		
+console.log(name+'; '+depends.join(','));
 		carriage( addExt(depends), __DEFINE_BASEURL__ );
-		if(name){
-			carriage( addExt([name]), __DEFINE_BASEURL__ );
-		}
-
+//		if(name){
+//			carriage( addExt([name]), __DEFINE_BASEURL__ );
+//		}
+		
 		factory(name, depends, constructor);
 		
 		name = depends = constructor = null;
@@ -723,8 +753,12 @@
 	 */
 	function defineCommonModules(){
 		factory(CONST_REQUIRE, [], function(){
-			return function(id){
-				return (modules[id])? modules[id].context: null;
+			return function(id, callback){
+				if( arguments.length === 2 && isArray(id) && isFunction(callback) ){
+					return define(id, callback);
+				}else{
+					return (modules[id])? modules[id].context: null;
+				}
 			};
 		});
 		
