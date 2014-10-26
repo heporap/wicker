@@ -81,7 +81,7 @@
 			__DEFINE_BASEURL__ = __BASEURL__ = normalizePath(src, __BASEURL__);
 		}else{
 			__BASEURL__ = src;
-			__DEFINE_BASEURL__ = './';
+			__DEFINE_BASEURL__ = location.href.substring(0, location.href.lastIndexOf('/')+1);
 		}
 		modMain = script.getAttribute('data-main');
 		if( modMain ){
@@ -465,8 +465,20 @@
 			
 		}else if( isString(arg) ){
 			url = arg;
-			baseURL = ( url.indexOf('/')===0 || url.indexOf('://')!==-1)? '': baseURL? baseURL: __BASEURL__;
-			createScript(id, baseURL+url, opt);
+			baseURL = ( url.lastIndexOf('/', 0)===0 || url.lastIndexOf('://', 0)!==-1)? '': baseURL? baseURL: __BASEURL__;
+			
+			var findUrl = false;
+			
+			for( var i in modules ){
+				if( modules[i].url === normalizePath(baseURL, url) ){
+					findUrl = true;
+					break;
+				}
+			}
+			
+			if( !findUrl ){
+				createScript(id, normalizePath(baseURL, url), opt);
+			}
 			
 		}else{
 			baseURL = arg.baseURL || baseURL;
@@ -558,12 +570,14 @@
 		for(i = 0; i < arguments.length; i++ ){
 			if( isString( arguments[i] ) ){
 				name = arguments[i];
+				
 			}else if( isArray(arguments[i]) ){
 				depends = arguments[i];
+				
 			}else if( isFunction(arguments[i]) ){
 				constructor = arguments[i];
-			}else if( !!arguments[i] ){
 				
+			}else if( !!arguments[i] ){
 				name = arguments[i].name;
 				confs = {};
 				copy(arguments[i], confs);
@@ -572,10 +586,15 @@
 			}
 		}
 		
+		if( name ){
+				var queryStringPos = name.indexOf('?');
+				name = name.substring(name.lastIndexOf('/')+1, (queryStringPos===-1)? name.length: queryStringPos );
+		}
+		
 		if( arguments.length === 1 && name ){
 			lastModID = null;
 			if( adapter(name) ){
-				recallAdapter(name);        
+				recallAdapter(name);
 			}
 			lastModID = name;
 			return name;
@@ -611,17 +630,21 @@
 		for(i = 0; i < arguments.length; i++ ){
 			if( isString( arguments[i] ) ){
 				name = arguments[i];
+				
 			}else if( isArray(arguments[i]) ){
 				depends = arguments[i];
+				
 			}else if( !!arguments[i] ){
 				constructor = arguments[i];
+				
 			}
+			
 		}
 		
-		if( !isFunction(arguments[i]) ){
+		if( !isFunction(constructor) ){
 			constructor = (function(o){ return function(){return o;}; }(constructor));
+			
 		}
-
 		carriage( addExt(depends), __DEFINE_BASEURL__ );
 		
 		factory(name, depends, constructor);
@@ -702,11 +725,11 @@
 	 * add file extension to module_id
 	 */
 	function addExt(args){
-		var result = {},
+		var result = [],
 				i, d;
 		for( i = 0; i < args.length; i++ ){
 			d= args[i];
-			result[args[i]]=( !/\.js$/.test(d) )? d+'.js': d;
+			result[i] = ( !/\.js$/.test(d) )? d+'.js': d;
 		}
 		return result;
 	}

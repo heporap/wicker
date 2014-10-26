@@ -1,4 +1,4 @@
-/*! wicker.js modules - 2014-05-19
+/*! wicker.js modules - 2014-10-27
  * (c) 2014 Wicker Wings
  * License: MIT
  ****/
