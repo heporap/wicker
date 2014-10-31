@@ -1,5 +1,5 @@
 /*
- * Wicker.js 0.3.6
+ * Wicker.js 0.3.7
  * 
  * Javascript module loader
  * 
@@ -113,6 +113,7 @@
 				paths.push(relPaths[i]);
 			}
 		}
+
 		return paths.join('/');
 		
 	}
@@ -469,15 +470,16 @@
 			
 			var findUrl = false;
 			
+			url = normalizePath(baseURL, url);
 			for( var i in modules ){
-				if( modules[i].url === normalizePath(baseURL, url) ){
+				if( modules[i].url === url ){
 					findUrl = true;
 					break;
 				}
 			}
 			
 			if( !findUrl ){
-				createScript(id, normalizePath(baseURL, url), opt);
+				createScript(id, url, opt);
 			}
 			
 		}else{
@@ -645,7 +647,17 @@
 			constructor = (function(o){ return function(){return o;}; }(constructor));
 			
 		}
-		carriage( addExt(depends), __DEFINE_BASEURL__ );
+		
+		i = depends.length;
+		var deps = [];
+		for( i = 0; i < depends.length; i++ ){
+			m=modules[depends[i]];
+			if( !m || !m.context ){
+				deps.push(depends[i]);
+			}
+		}
+		
+		carriage( addExt(collector(deps)), __DEFINE_BASEURL__ );
 		
 		factory(name, depends, constructor);
 		
