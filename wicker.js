@@ -466,7 +466,8 @@
 			
 		}else if( isString(arg) ){
 			url = arg;
-			baseURL = ( url.lastIndexOf('/', 0)===0 || url.lastIndexOf('://', 0)!==-1)? '': baseURL? baseURL: __BASEURL__;
+			baseURL = ( url.lastIndexOf('/', 0) === 0 || url.lastIndexOf('://', 0) !== -1 )? '': baseURL? baseURL: __BASEURL__;
+			baseURL = ( baseURL.lastIndexOf('://', 0) !== -1 || baseURL.lastIndexOf('//', 0) === 0 )? baseURL: normalizePath(location.href, baseURL);
 			
 			var findUrl = false;
 			
@@ -627,7 +628,7 @@
 	 */
 	function define(){
 		var name = null, depends = [CONST_REQUIRE, CONST_EXPORTS, CONST_MODULE], constructor,
-			i;
+			i, m;
 		
 		for(i = 0; i < arguments.length; i++ ){
 			if( isString( arguments[i] ) ){
@@ -651,7 +652,7 @@
 		i = depends.length;
 		var deps = [];
 		for( i = 0; i < depends.length; i++ ){
-			m=modules[depends[i]];
+			m = modules[depends[i]];
 			if( !m || !m.context ){
 				deps.push(depends[i]);
 			}
